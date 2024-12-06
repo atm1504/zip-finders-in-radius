@@ -32,8 +32,15 @@ export class HaversineDistanceService implements OnModuleInit {
   ): Array<{
     zip_code: string;
     distance: number;
+    lat: number;
+    lon: number;
   }> {
-    const results: Array<{ zip_code: string; distance: number }> = [];
+    const results: Array<{
+      zip_code: string;
+      distance: number;
+      lat: number;
+      lon: number;
+    }> = [];
 
     for (const entry of this.zipCodes) {
       const { lat: entryLat, lon: entryLon } = entry.geo_point_2d;
@@ -42,7 +49,12 @@ export class HaversineDistanceService implements OnModuleInit {
       const distance = this.haversineDistance(lat, lon, entryLat, entryLon);
 
       if (distance <= radiusKm) {
-        results.push({ zip_code: entry.zip_code, distance });
+        results.push({
+          zip_code: entry.zip_code,
+          distance,
+          lat: entryLat,
+          lon: entryLon,
+        });
       }
     }
 

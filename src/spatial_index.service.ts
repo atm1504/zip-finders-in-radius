@@ -12,11 +12,11 @@ export class SpatialIndexService implements OnModuleInit {
   private index: any;
 
   async onModuleInit() {
-    // Load JSON file
     // Derive the __dirname equivalent for ES Modules
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
 
+    // Load JSON file
     const filePath = join(__dirname, '..', 'data', 'zipcodes.json');
     this.zipCodes = JSON.parse(readFileSync(filePath, 'utf8'));
 
@@ -35,7 +35,16 @@ export class SpatialIndexService implements OnModuleInit {
     this.index.finish();
   }
 
-  getZipCodesInRadius(lat: number, lon: number, radiusKm: number): string[] {
+  getZipCodesInRadius(
+    lat: number,
+    lon: number,
+    radiusKm: number,
+  ): Array<{
+    zip_code: string;
+    lat: number;
+    lon: number;
+    distance: number;
+  }> {
     console.log('You are called');
     const radius = radiusKm / 111.32; // Approx conversion: 1° latitude ≈ 111.32 km
     const matchingIndices = this.index.search(
@@ -46,11 +55,10 @@ export class SpatialIndexService implements OnModuleInit {
     );
 
     console.log('Hi i am here', lat, lon, radius);
-
     console.log('matching indexes: ', matchingIndices);
 
     // Filter results further by precise distance
-    return matchingIndices
+    const results = matchingIndices
       .filter((i) => {
         const entry = this.zipCodes[i];
         const distance = this.haversineDistance(
@@ -61,7 +69,23 @@ export class SpatialIndexService implements OnModuleInit {
         );
         return distance <= radiusKm;
       })
-      .map((i) => this.zipCodes[i].zip_code);
+      .map((i) => {
+        const entry = this.zipCodes[i];
+        const distance = this.haversineDistance(
+          lat,
+          lon,
+          entry.geo_point_2d.lat,
+          entry.geo_point_2d.lon,
+        );
+
+        return {
+          zip_code: entry.zip_code,
+          lat: entry.geo_point_2d.lat,
+          lon: entry.geo_point_2d.lon,
+          distance, // Include distance in the response
+        };
+      });
+    return results.sort((a, b) => a.distance - b.distance);
   }
 
   private haversineDistance(
